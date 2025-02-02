@@ -11,20 +11,20 @@ Debian/Ubuntu based distros:\
 Fedora/CentOS based distros:\
 `sudo dnf install python3-tkinter`\
 Arch based distros:\
-`sudo pacman -S tk`\
+`sudo pacman -S tk`
 
 After python is installed, you must open terminal or PowerShell and run:\
 `pip install yt_dlp`\
-`pip install mutagen`\
+`pip install mutagen`
 
 You also need to install FFMpeg, which can be done by\
 Windows:\
 Open powershell as administrator and run:\
-`winget install ffmpeg`\
+`winget install ffmpeg`
 MacOS:\
 Install homebrew from http://brew.sh\
 Open Terminal and run:\
-`brew install ffmpeg`\
+`brew install ffmpeg`
 Linux:\
 Install FFMpeg from your distro's package manager\
 Debian/Ubuntu based distros:\
@@ -32,7 +32,7 @@ Debian/Ubuntu based distros:\
 Fedora/CentOS based distros:\
 `sudo dnf install ffmpeg`\
 Arch based distros:\
-`sudo pacman -S ffmpeg`\
+`sudo pacman -S ffmpeg`
 
 How to open\
 On MacOS/Linux open terminal and run:\
@@ -40,4 +40,4 @@ On MacOS/Linux open terminal and run:\
 then double click `run_unix.sh` or run:\
 `./run_unix.sh`\
 On Windows, double click `run_windows.cmd` or open PowerShell and run:\
-`./run_windows.cmd`\
+`./run_windows.cmd`
