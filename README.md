@@ -20,11 +20,11 @@ After python is installed, you must open terminal or PowerShell and run:\
 You also need to install FFMpeg, which can be done by\
 Windows:\
 Open powershell as administrator and run:\
-`winget install ffmpeg`
+`winget install ffmpeg`\
 MacOS:\
 Install homebrew from http://brew.sh\
 Open Terminal and run:\
-`brew install ffmpeg`
+`brew install ffmpeg`\
 Linux:\
 Install FFMpeg from your distro's package manager\
 Debian/Ubuntu based distros:\
