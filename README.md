@@ -22,7 +22,7 @@ Windows:\
 Open powershell as administrator and run:\
 `winget install ffmpeg`\
 MacOS:\
-Install homebrew from http://brew.sh\
+Install homebrew from http://brew.sh \
 Open Terminal and run:\
 `brew install ffmpeg`\
 Linux:\
