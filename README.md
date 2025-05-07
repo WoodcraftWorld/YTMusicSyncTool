@@ -37,8 +37,8 @@ Arch based distros:\
 How to open\
 On Linux open terminal and run:\
 `chmod +x ./run_linux.sh`\
-then double click `run_unix.sh` or run:\
-`./run_unix.sh`\
+then double click `run_linux.sh` or run:\
+`./run_linux.sh`\
 How to open\
 On macOS open terminal and run:\
 `chmod +x ./run_osx`\
