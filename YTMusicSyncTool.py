@@ -37,9 +37,9 @@ def download_audio(url, output_path):
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=True)  # Extract info and download
-        filename = ydl.prepare_filename(info_dict)  # Get the original filename
-        filename = filename.rsplit('.', 1)[0] + '.mp3'  # Ensure MP3 extension
+        info_dict = ydl.extract_info(url, download=True)
+        filename = ydl.prepare_filename(info_dict)
+        filename = filename.rsplit('.', 1)[0] + '.mp3'
         video_name = info_dict.get('title', 'Unknown Title')
         uploader = info_dict.get('uploader', 'Unknown Uploader')
         return [filename, uploader, video_name]
