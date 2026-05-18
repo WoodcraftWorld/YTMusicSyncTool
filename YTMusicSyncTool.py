@@ -13,6 +13,7 @@ import os
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC, error
+import threading
 ssl._create_default_https_context = ssl._create_unverified_context
 config_dir = Path(user_config_dir("YouTube Music Sync Tool", "WoodcraftWorld"))
 config_dir.mkdir(parents=True, exist_ok=True)
@@ -193,6 +194,9 @@ def updatedir():
         messagebox.showwarning("Application","Cancel button pressed. No changes made.")
     
 def sync():
+    syncbutton.config(state="disabled")
+    folderbutton.config(state="disabled")
+    
     prefs= open(prefs_file, "r")
     prefs1=prefs.readlines()
     print(prefs1[1])
@@ -211,6 +215,7 @@ def sync():
         if i not in videos:
             delete.append(i)
     #stepbar=100/(len(download)+len(delete))
+    progressbar['maximum'] = len(download)+len(delete)
     for i in download:
         os.mkdir(folder+"/db/"+i)
         try:
@@ -234,9 +239,9 @@ def sync():
 root = Tk()
 root.eval('tk::PlaceWindow . center')
 root.title('YouTube Music Sync Tool')
-ttk.Button(root,text="Change Folder",command=updatedir).grid(columnspan=2,column=1,row=1)
-ttk.Button(root,text="Change Playlist",command=updatelist).grid(columnspan=2,column=3,row=1)
-ttk.Button(root,text="Sync",command=sync).grid(columnspan=2,column=2,row=2)
-#progressbar = ttk.Progressbar(root,length=255).grid(column=1,row=3,columnspan=4)
+folderbutton = ttk.Button(root,text="Change Folder",command=updatedir).grid(columnspan=2,column=1,row=1)
+playlistbutton = ttk.Button(root,text="Change Playlist",command=updatelist).grid(columnspan=2,column=3,row=1)
+syncbutton = ttk.Button(root,text="Sync",command=sync).grid(columnspan=2,column=2,row=2)
+progressbar = ttk.Progressbar(root,length=255).grid(column=1,row=3,columnspan=4)
 root.resizable(False, False)
 root.mainloop()
