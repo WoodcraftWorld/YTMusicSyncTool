@@ -35,7 +35,7 @@ Linux:\
 Install FFMpeg from your distro's package manager\
 Debian/Ubuntu based distros:\
 `sudo apt install ffmpeg`\
-Fedora/CentOS based distros:\
+Fedora/CentOS/Red Hat based distros:\
 `sudo dnf install ffmpeg`\
 Arch based distros:\
 `sudo pacman -S ffmpeg`
