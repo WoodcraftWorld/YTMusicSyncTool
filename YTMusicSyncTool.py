@@ -1,42 +1,50 @@
 import yt_dlp
-from tkinter import *
+import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
 from tkinter import simpledialog
 from tkinter import messagebox
+from tkinter import scrolledtext
 from platformdirs import user_config_dir
 from pathlib import Path
 import tempfile
+import pygpod
 from PIL import Image
 import ssl
 import os
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
-from mutagen.id3 import ID3, APIC, error
+from mutagen.id3 import ID3, APIC, error, TCOM
 import threading
-ssl._create_default_https_context = ssl._create_unverified_context
+import subprocess
 config_dir = Path(user_config_dir("YouTube Music Sync Tool", "WoodcraftWorld"))
 config_dir.mkdir(parents=True, exist_ok=True)
 prefs_file=Path.joinpath(config_dir, "prefs.txt")
 if not prefs_file.exists():
     prefs_file.touch()
     prefs=open(prefs_file,"w")
-    prefs.writelines(["https://music.youtube.com/playlist?list=PLcWIVMUpeHEvwq5M3qkZf9QIOBFI2wjeO\n", "C:\\Music"])
+    prefs.writelines(["https://music.youtube.com/playlist?list=PLcWIVMUpeHEvwq5M3qkZf9QIOBFI2wjeO\n", "C:\\Music\n", "0"])
     prefs.close()
-
 #PROGRAM LOGIC
 print('VERBOSE OUTPUT')
-def tag_mp3(file_path, artist, title):
+def add_log_text(log_text):
+    textarea.config(state=tk.NORMAL)
+    textarea.insert(tk.END, str(log_text)+"\n")
+    textarea.see(tk.END)
+    textarea.config(state=tk.DISABLED)
+def tag_mp3(file_path, artist, title, album, videoid):
     try:
         audio = EasyID3(file_path)
     except Exception:
         audio = EasyID3()
-
+    EasyID3.RegisterKey("composer","TCOM")
     audio["artist"] = artist
     audio["title"] = title
+    audio["album"] = album
+    audio["composer"] = videoid
     audio.save(file_path)
 
-    print(f"Tagged '{file_path}' with Artist: '{artist}' and Title: '{title}'")
+    add_log_text(f"Tagged '{file_path}' with Artist: '{artist}' and Title: '{title}'")
 
 def download_and_crop_thumb(video_id: str, output_jpg_path: str):
 
@@ -51,7 +59,7 @@ def download_and_crop_thumb(video_id: str, output_jpg_path: str):
             'no_warnings': True
         }
         
-        print(f"Downloading thumbnail for video ID: {video_id}...")
+        add_log_text(f"Downloading {video_id} Thumbnail")
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([video_url])
         downloaded_files = os.listdir(tmpdir)
@@ -62,8 +70,8 @@ def download_and_crop_thumb(video_id: str, output_jpg_path: str):
                 break
                 
         if not thumb_file:
-            raise FileNotFoundError("Could not download or locate the thumbnail from YouTube.")
-        print("Cropping image to a center-focused square...")
+            raise FileNotFoundError("Could not download thumbnail")
+        add_log_text("Cropping image to a square")
         with Image.open(thumb_file) as img:
             if img.mode != 'RGB':
                 img = img.convert('RGB')
@@ -81,9 +89,9 @@ def download_and_crop_thumb(video_id: str, output_jpg_path: str):
                 os.makedirs(output_dir, exist_ok=True)
                 
             cropped_img.save(output_jpg_path, 'JPEG', quality=95)
-            print(f"Successfully saved square thumbnail to: {output_jpg_path}")
+            add_log_text(f"Successfully saved thumbnail {output_jpg_path}")
 
-def add_album_art(mp3_path, image_path):
+def add_album_art(mp3_path, image_path, keepImage):
     if not os.path.exists(mp3_path):
         raise FileNotFoundError(f"MP3 file not found at: {mp3_path}")
     if not os.path.exists(image_path):
@@ -107,10 +115,12 @@ def add_album_art(mp3_path, image_path):
             )
         )
         audio.save()
-        print(f"Successfully added album art to {os.path.basename(mp3_path)}")
+        if keepImage != 0:
+            os.remove(image_path)
+        add_log_text(f"Successfully added album art to {os.path.basename(mp3_path)}")
 
     except Exception as e:
-        print(f"An error occurred while tagging the file: {e}")
+        add_log_text(f"An error occurred while tagging the file: {e}")
 
 def download_audio(url, output_path):
     ydl_opts = {
@@ -119,7 +129,7 @@ def download_audio(url, output_path):
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
-            'preferredquality': '192',
+            'preferredquality': '256',
         }],
     }
 
@@ -132,7 +142,10 @@ def download_audio(url, output_path):
         uploader = uploader.replace(" - Topic","")
         video_name = video_name.replace(uploader+" - ", "")
         video_name = video_name.replace(" - "+uploader,"")
-        return [filename, uploader, video_name]
+        albumname = info_dict.get("album", "Video")
+        videoid = info_dict.get('id')
+        add_log_text(f"Video {video_name} by {uploader} downloaded")
+        return [filename, uploader, video_name, albumname, videoid]
 
 def get_files(directory):
     return [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
@@ -153,12 +166,14 @@ def get_video_ids(playlist_url):
         info = ydl.extract_info(playlist_url, download=False)
         return [entry['id'] for entry in info.get('entries', []) if 'id' in entry]
         
-
+def updateStatus():
+    statustext.configure(text=f"Status: {int(progressbar['value'])}/{progressbar['maximum']}")
 def updatelist():
     prefs= open(prefs_file, "r")
     prefs1=prefs.readlines()
     print(prefs1[1])
     folder=prefs1[1]
+    enableStoreImages=prefs1[2]
     prefs.close()
 
     newpl=simpledialog.askstring("Change Playlist","Enter the URL of your playlist", parent=root)
@@ -168,7 +183,7 @@ def updatelist():
             updatelist()
             return("ok")
         prefs=open(prefs_file,"w")
-        prefs.writelines([newpl+"\n", folder])
+        prefs.writelines([newpl+"\n", folder,enableStoreImages])
         prefs.close()
     else:
         messagebox.showwarning("Application","Cancel button pressed or text box left empty. No changes made.")
@@ -178,31 +193,42 @@ def updatedir():
     print(prefs1[0])
     playlist=prefs1[0]
     folder=prefs1[1]
+    enableStoreImages=prefs1[2]
     prefs.close()
     print(playlist)
     newdir=filedialog.askdirectory(parent=root, initialdir=folder)
     print(newdir)
     if newdir != "":
         prefs=open(prefs_file,"w")
-        prefs.writelines([playlist, newdir])
+        prefs.writelines([playlist, newdir+"\n", enableStoreImages])
         prefs.close()
         try:
             os.mkdir(newdir+"/db/")
+            hyperlink = Path.joinpath(newdir,"db","0YouTube Music Sync Tool.url")
+            """hyperlink.touch()
+            hyperlink_file = open(hyperlink,"w")
+            hyperlink_file.writelines(['[InternetShortcut]','URL=https://www.github.com/woodcraftworld/ytmusicsynctool','IconFile=https://woodcraftworld.github.io/image-hosting/ytmsticon.ico','IconIndex=0'])
+            hyperlink_file.close()"""
         except:
             print("db exists!")
     else:
         messagebox.showwarning("Application","Cancel button pressed. No changes made.")
-    
+def startSync():
+    threading.Thread(target=sync, daemon=True).start()
 def sync():
-    syncbutton.config(state="disabled")
+    playlistbutton.config(state="disabled")
     folderbutton.config(state="disabled")
-    
+    syncbutton.config(state="disabled")
+    savethumbs.config(state="disabled")
     prefs= open(prefs_file, "r")
     prefs1=prefs.readlines()
-    print(prefs1[1])
-    folder=prefs1[1]
+    add_log_text(prefs1[1])
+    folder=prefs1[1].strip()
     playlist=prefs1[0]
+    keepJpegs=int(prefs1[2])
     prefs.close
+    if keepJpegs == 2:
+        messagebox.showwarning("Application", "libgpod, the library used to interface with iPods, is in early alpha. If your iPod reports having no tracks after running this sync tool, then modify anything in iOpenPod to properly sign your iTunesDB file. I recommend giving any song a track number. iOpenPod can be installed by running \"pip install iopenpod\" in your terminal. You can run iOpenPod by typing \"iopenpod\" in your terminal.")
     videos=get_video_ids(playlist.removesuffix("\n"))
     download=[]
     delete=[]
@@ -214,34 +240,100 @@ def sync():
     for i in dbentries:
         if i not in videos:
             delete.append(i)
+    
     #stepbar=100/(len(download)+len(delete))
     progressbar['maximum'] = len(download)+len(delete)
+    updateStatus()
     for i in download:
         os.mkdir(folder+"/db/"+i)
         try:
             mp3 = download_audio(i,folder)
-            tag_mp3(mp3[0],mp3[1],mp3[2])
+            tag_mp3(mp3[0],mp3[1],mp3[2],mp3[3],mp3[4])
             jpg=Path(mp3[0]).with_suffix('.jpg')
             download_and_crop_thumb(i,jpg)
-            add_album_art(mp3[0],jpg)
+            add_album_art(mp3[0],jpg,keepJpegs)
+            if keepJpegs == 2:
+                #Sync with iPod logic
+                iPod=pygpod.Database(folder)
+                iPod.add_track(mp3[0],composer=mp3[4])
+                iPod.save()
+                os.remove(mp3[0])
+
         except:
-            print("Failed to download \""+i+"\", will not attempt to redownload unless the \""+i+"\" folder is deleted from db.")
-        #progressbar.step(stepbar)
+            add_log_text("Failed to download \""+i+"\", will not attempt to redownload unless the \""+i+"\" folder is deleted from db.")
+        progressbar.step(1)
+        updateStatus()
     for i in delete:
-        for j in alreadyhave:
-            if i in j:
-                os.remove(folder+"/"+j)
-                os.rmdir(folder+"/db/"+i)
-                #progressbar.step(stepbar)
-    print(download)
-    print(delete)
+        if keepJpegs==2:
+            for j in dbentries:
+                if i in j:
+                    iPod=pygpod.Database(folder)
+                    for Track in iPod.tracks:
+                        print (i)
+                        print (Track.composer)
+                        if i in Track.composer:
+                            print("This ran")
+                            iPod.remove_track(Track, True)
+                            iPod.save()
+                    os.rmdir(folder+"/db/"+i)
+                    progressbar.step(1)
+                    updateStatus()
+        else:            
+            for j in alreadyhave:
+                if i in j:
+                    os.remove(folder+"/"+j)
+                    os.rmdir(folder+"/db/"+i)
+                    progressbar.step(1)
+                    updateStatus()
+    add_log_text(download)
+    add_log_text(delete)
+    syncbutton.config(state="enabled")
+    savethumbs.config(state="enabled")
+    playlistbutton.config(state="enabled")
+    folderbutton.config(state="enabled")
+    if keepJpegs==2:
+        if messagebox.askyesno("Application", "Do you want to open iOpenPod?"):
+            subprocess.Popen(['iopenpod'])
+def storeimages(event):
+    prefs= open(prefs_file, "r")
+    prefs1=prefs.readlines()
+    playlist=prefs1[0]
+    folder=prefs1[1]
+    newCheckedState=savethumbs.current()
+    prefs.close()
+    prefs=open(prefs_file,"w")
+    prefs.writelines([playlist, folder,str(newCheckedState)])
+    prefs.close()
+
+
 #GUI
-root = Tk()
+root = tk.Tk()
+prefs=open(prefs_file,"r")
+prefs1=prefs.readlines()
+state1=int(prefs1[2])
+prefs.close
 root.eval('tk::PlaceWindow . center')
 root.title('YouTube Music Sync Tool')
-folderbutton = ttk.Button(root,text="Change Folder",command=updatedir).grid(columnspan=2,column=1,row=1)
-playlistbutton = ttk.Button(root,text="Change Playlist",command=updatelist).grid(columnspan=2,column=3,row=1)
-syncbutton = ttk.Button(root,text="Sync",command=sync).grid(columnspan=2,column=2,row=2)
-progressbar = ttk.Progressbar(root,length=255).grid(column=1,row=3,columnspan=4)
+icon=tk.PhotoImage(file="icon.png")
+root.iconphoto(False,icon)
+folderbutton = ttk.Button(root,text="Change Folder",command=updatedir)
+folderbutton.grid(columnspan=2,column=1,row=1)
+playlistbutton = ttk.Button(root,text="Change Playlist",command=updatelist)
+playlistbutton.grid(columnspan=2,column=3,row=1)
+additionalOptions = ['Default option', 'Keep thumbnails', 'Sync with iPod']
+#savethumbs = ttk.Checkbutton(root,text="Keep thumbnails",command=storeimages,variable=storeImagesCheck)
+savethumbs = ttk.Combobox(root,values=additionalOptions,state="readonly",width=12)
+savethumbs.grid(columnspan=2,column=1,row=2)
+savethumbs.bind("<<ComboboxSelected>>",storeimages)
+savethumbs.current(state1)
+syncbutton = ttk.Button(root,text="Start sync",command=startSync,width=10)
+syncbutton.grid(columnspan=1,column=3,row=2)
+statustext = ttk.Label(root, text="Status: 0/0")
+statustext.grid(column=3,row=3)
+progressbar = ttk.Progressbar(root,length=255)
+progressbar.grid(column=1,row=4,columnspan=4)
+textarea = scrolledtext.ScrolledText(root,width=35,height=10)
+textarea.grid(column=2,row=5,columnspan=2)
+textarea.config(state=tk.DISABLED)
 root.resizable(False, False)
 root.mainloop()

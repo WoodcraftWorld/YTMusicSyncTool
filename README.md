@@ -21,10 +21,15 @@ You also need to install FFMpeg, which can be done by\
 Windows:\
 Open powershell as administrator and run:\
 `winget install ffmpeg`\
-macOS:\
+macOS (10.15+, precompiled binaries):\
 Install homebrew from http://brew.sh \
 Open Terminal and run:\
 `brew install ffmpeg`\
+macOS (10.5+, compiles on your Mac):\
+Install MacPorts from https://macports.org/install.php#installing \
+NOTE: App requires Python 3.10, which still needs OS X 10.9, even if FFMpeg can run on 10.5. \
+Open Terminal and run:\
+`sudo port install ffmpeg`\
 Linux:\
 Install FFMpeg from your distro's package manager\
 Debian/Ubuntu based distros:\
