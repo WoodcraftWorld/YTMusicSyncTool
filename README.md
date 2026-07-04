@@ -1,9 +1,11 @@
 # YTMusicSyncTool
-A tool to sync a YouTube or YouTube Music playlist to MP3 files on an MP3 player
+A tool to sync a YouTube or YouTube Music playlist to MP3 files on an MP3 player or iPod*
+
+_*iPod support is in beta. most iPods are supported, but not the iPod nano 6th gen or 7th gen. iPhone, iPad, and iPod touch are not supported. For unsupported models, you can sync to a folder on your local drive, then sync the songs to your iPod with an iTunes/Finder or an alternative like iOpenPod._
 
 # Installation Instructions
 
-Latest version of Python 3 must be installed from http://python.org on macOS or Windows (you can't use Homebrew on MacOS for this)\
+Latest version of Python 3 must be installed from http://python.org on macOS or Windows\
 Python must be installed to PATH on Windows\
 On linux only you will need to install TKINTER with these commands\
 Debian/Ubuntu based distros:\
@@ -14,8 +16,7 @@ Arch based distros:\
 `sudo pacman -S tk`
 
 After python is installed, you must open terminal or PowerShell and run:\
-`pip install yt_dlp`\
-`pip install mutagen`
+`pip install -r /path/to/requirements.txt`
 
 You also need to install FFMpeg, which can be done by\
 Windows:\
@@ -27,7 +28,7 @@ Open Terminal and run:\
 `brew install ffmpeg`\
 macOS (10.5+, compiles on your Mac):\
 Install MacPorts from https://macports.org/install.php#installing \
-NOTE: App requires Python 3.10, which still needs OS X 10.9, even if FFMpeg can run on 10.5. \
+_NOTE: App requires Python 3.11, which still needs OS X 10.9, even if FFMpeg can run on 10.5._ \
 Open Terminal and run:\
 `sudo port install ffmpeg`\
 Linux:\

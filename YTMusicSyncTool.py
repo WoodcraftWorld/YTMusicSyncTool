@@ -234,7 +234,8 @@ def sync():
     keepJpegs=int(prefs1[2])
     prefs.close
     if keepJpegs == 2:
-        messagebox.showwarning("Application", "iPod support is in early alpha! iTunesDB corruptions may occur.")
+        print("Do nothing")
+        #messagebox.showwarning("Application", "iPod support is in beta! iTunesDB corruptions may occur.")
     videos=get_video_ids(playlist.removesuffix("\n"))
     download=[]
     delete=[]
@@ -276,8 +277,8 @@ def sync():
                 if i in j:
                     iPod=pygpod.Database(folder)
                     for Track in iPod.tracks:
-                        print (i)
-                        print (Track.composer)
+                        ##print (i)
+                        #print (Track.composer)
                         if i in Track.composer:
                             print("This ran")
                             iPod.remove_track(Track, True)
@@ -312,7 +313,12 @@ def storeimages(event):
     prefs=open(prefs_file,"w")
     prefs.writelines([playlist, folder,str(newCheckedState)])
     prefs.close()
-
+    folderButtonText()
+def folderButtonText():
+    if savethumbs.current() == 2:
+        folderbutton.config(text="Choose iPod")
+    else:
+        folderbutton.config(text="Choose folder")
 
 #GUI
 root = tk.Tk()
@@ -324,9 +330,9 @@ root.eval('tk::PlaceWindow . center')
 root.title('YouTube Music Sync Tool')
 icon=tk.PhotoImage(file="icon.png")
 root.iconphoto(False,icon)
-folderbutton = ttk.Button(root,text="Change Folder",command=updatedir)
+folderbutton = ttk.Button(root,command=updatedir, width=10)
 folderbutton.grid(columnspan=2,column=1,row=1)
-playlistbutton = ttk.Button(root,text="Change Playlist",command=updatelist)
+playlistbutton = ttk.Button(root,text="Choose Playlist",command=updatelist, width=10)
 playlistbutton.grid(columnspan=2,column=3,row=1)
 additionalOptions = ['Default option', 'Keep thumbnails', 'Sync with iPod']
 #savethumbs = ttk.Checkbutton(root,text="Keep thumbnails",command=storeimages,variable=storeImagesCheck)
@@ -334,6 +340,7 @@ savethumbs = ttk.Combobox(root,values=additionalOptions,state="readonly",width=1
 savethumbs.grid(columnspan=2,column=1,row=2)
 savethumbs.bind("<<ComboboxSelected>>",storeimages)
 savethumbs.current(state1)
+folderButtonText()
 syncbutton = ttk.Button(root,text="Start sync",command=startSync,width=10)
 syncbutton.grid(columnspan=1,column=3,row=2)
 statustext = ttk.Label(root, text="Status: 0/0")
