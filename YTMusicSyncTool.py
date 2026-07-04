@@ -11,12 +11,15 @@ import tempfile
 import pygpod
 from PIL import Image
 import ssl
+import fixiTunes
 import os
+from typing import Any
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
-from mutagen.id3 import ID3, APIC, error, TCOM
+from mutagen.id3 import ID3
+from mutagen.id3._frames import APIC, TCOM
+from mutagen.id3._util import error
 import threading
-import subprocess
 config_dir = Path(user_config_dir("YouTube Music Sync Tool", "WoodcraftWorld"))
 config_dir.mkdir(parents=True, exist_ok=True)
 prefs_file=Path.joinpath(config_dir, "prefs.txt")
@@ -51,7 +54,7 @@ def download_and_crop_thumb(video_id: str, output_jpg_path: str):
     video_url = f"https://www.youtube.com/watch?v={video_id}"
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        ydl_opts = {
+        ydl_opts: dict[str, Any] = {
             'skip_download': True,
             'writethumbnail': True,  
             'outtmpl': os.path.join(tmpdir, 'thumb'), 
@@ -60,7 +63,7 @@ def download_and_crop_thumb(video_id: str, output_jpg_path: str):
         }
         
         add_log_text(f"Downloading {video_id} Thumbnail")
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:  # type: ignore[arg-type]
             ydl.download([video_url])
         downloaded_files = os.listdir(tmpdir)
         thumb_file = None
@@ -103,6 +106,9 @@ def add_album_art(mp3_path, image_path, keepImage):
             audio.add_tags()
         except error:
             pass
+        if audio.tags is None:
+            audio.add_tags()
+        assert audio.tags is not None
         with open(image_path, 'rb') as img_file:
             img_data = img_file.read()
         audio.tags.add(
@@ -123,7 +129,7 @@ def add_album_art(mp3_path, image_path, keepImage):
         add_log_text(f"An error occurred while tagging the file: {e}")
 
 def download_audio(url, output_path):
-    ydl_opts = {
+    ydl_opts: dict[str, Any] = {
         'format': 'bestaudio/best',
         'outtmpl': f'{output_path}/%(title)s - %(id)s.%(ext)s',
         'postprocessors': [{
@@ -133,15 +139,15 @@ def download_audio(url, output_path):
         }],
     }
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:  # type: ignore[arg-type]
         info_dict = ydl.extract_info(url, download=True)
         filename = ydl.prepare_filename(info_dict)
         filename = filename.rsplit('.', 1)[0] + '.mp3'
-        video_name = info_dict.get('title', 'Unknown Title')
-        uploader = info_dict.get('uploader', 'Unknown Uploader')
-        uploader = uploader.replace(" - Topic","")
-        video_name = video_name.replace(uploader+" - ", "")
-        video_name = video_name.replace(" - "+uploader,"")
+        video_name = info_dict.get('title') or 'Unknown Title'
+        uploader = info_dict.get('uploader') or 'Unknown Uploader'
+        uploader = str(uploader).replace(" - Topic","")
+        video_name = str(video_name).replace(uploader+" - ", "")
+        video_name = str(video_name).replace(" - "+uploader,"")
         albumname = info_dict.get("album", "Video")
         videoid = info_dict.get('id')
         add_log_text(f"Video {video_name} by {uploader} downloaded")
@@ -156,13 +162,13 @@ def get_folders(directory):
 
 
 def get_video_ids(playlist_url):
-    ydl_opts = {
+    ydl_opts: dict[str, Any] = {
         'quiet': True,
         'extract_flat': True,
         'force_generic_extractor': True
     }
     
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:  # type: ignore[arg-type]
         info = ydl.extract_info(playlist_url, download=False)
         return [entry['id'] for entry in info.get('entries', []) if 'id' in entry]
         
@@ -204,7 +210,7 @@ def updatedir():
         prefs.close()
         try:
             os.mkdir(newdir+"/db/")
-            hyperlink = Path.joinpath(newdir,"db","0YouTube Music Sync Tool.url")
+            hyperlink = Path(newdir).joinpath("db", "0YouTube Music Sync Tool.url")
             """hyperlink.touch()
             hyperlink_file = open(hyperlink,"w")
             hyperlink_file.writelines(['[InternetShortcut]','URL=https://www.github.com/woodcraftworld/ytmusicsynctool','IconFile=https://woodcraftworld.github.io/image-hosting/ytmsticon.ico','IconIndex=0'])
@@ -228,7 +234,7 @@ def sync():
     keepJpegs=int(prefs1[2])
     prefs.close
     if keepJpegs == 2:
-        messagebox.showwarning("Application", "libgpod, the library used to interface with iPods, is in early alpha. If your iPod reports having no tracks after running this sync tool, then modify anything in iOpenPod to properly sign your iTunesDB file. I recommend giving any song a track number. iOpenPod can be installed by running \"pip install iopenpod\" in your terminal. You can run iOpenPod by typing \"iopenpod\" in your terminal.")
+        messagebox.showwarning("Application", "iPod support is in early alpha! iTunesDB corruptions may occur.")
     videos=get_video_ids(playlist.removesuffix("\n"))
     download=[]
     delete=[]
@@ -250,13 +256,14 @@ def sync():
             mp3 = download_audio(i,folder)
             tag_mp3(mp3[0],mp3[1],mp3[2],mp3[3],mp3[4])
             jpg=Path(mp3[0]).with_suffix('.jpg')
-            download_and_crop_thumb(i,jpg)
+            download_and_crop_thumb(i, str(jpg))
             add_album_art(mp3[0],jpg,keepJpegs)
             if keepJpegs == 2:
                 #Sync with iPod logic
                 iPod=pygpod.Database(folder)
                 iPod.add_track(mp3[0],composer=mp3[4])
                 iPod.save()
+                fixiTunes.fix_iTunesDB(folder)
                 os.remove(mp3[0])
 
         except:
@@ -275,6 +282,7 @@ def sync():
                             print("This ran")
                             iPod.remove_track(Track, True)
                             iPod.save()
+                            fixiTunes.fix_iTunesDB(folder)
                     os.rmdir(folder+"/db/"+i)
                     progressbar.step(1)
                     updateStatus()
@@ -291,9 +299,9 @@ def sync():
     savethumbs.config(state="enabled")
     playlistbutton.config(state="enabled")
     folderbutton.config(state="enabled")
-    if keepJpegs==2:
+    '''if keepJpegs==2:
         if messagebox.askyesno("Application", "Do you want to open iOpenPod?"):
-            subprocess.Popen(['iopenpod'])
+            subprocess.Popen(['iopenpod'])'''
 def storeimages(event):
     prefs= open(prefs_file, "r")
     prefs1=prefs.readlines()
