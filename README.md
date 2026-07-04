@@ -15,8 +15,8 @@ Fedora/CentOS based distros:\
 Arch based distros:\
 `sudo pacman -S tk`
 
-After python is installed, you must open terminal or PowerShell and run:\
-`pip install -r /path/to/requirements.txt`
+After python is installed, you must open terminal or PowerShell to the YTMusicSyncTool folder and run:\
+`pip install -r requirements.txt`
 
 You also need to install FFMpeg, which can be done by\
 Windows:\
