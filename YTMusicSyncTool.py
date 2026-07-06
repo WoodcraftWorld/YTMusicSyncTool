@@ -135,7 +135,7 @@ def download_audio(url, output_path):
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
-            'preferredquality': '256',
+            'preferredquality': '320',
         }],
     }
 
